@@ -1,1 +1,5 @@
 PS C:\Users\Lenovo\Documents\projects\personal\MedRAG\apps\backend\src> uvicorn app:app --reload 
+
+https://medrag-87pt.onrender.com/
+
+https://akhilvaidya91.github.io/MedRAG/
