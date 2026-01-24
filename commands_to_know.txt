@@ -1,0 +1,1 @@
+PS C:\Users\Lenovo\Documents\projects\personal\MedRAG\apps\backend\src> uvicorn app:app --reload 
