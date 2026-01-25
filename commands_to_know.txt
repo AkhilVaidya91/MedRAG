@@ -1,5 +1,4 @@
-PS C:\Users\Lenovo\Documents\projects\personal\MedRAG\apps\backend\src> uvicorn app:app --reload 
+uvicorn app:app --reload 
 
-https://medrag-87pt.onrender.com/
-
+curl https://akhil-vaidya-medrag-backend.hf.space/hello
 https://akhilvaidya91.github.io/MedRAG/

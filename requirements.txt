@@ -1,2 +1,10 @@
 fastapi
 uvicorn
+pandas
+pickle
+psycopg2
+tqdm
+numpy
+sentencepiece
+datasets
+huggingface_hub
