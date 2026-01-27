@@ -1,7 +1,6 @@
 fastapi
 uvicorn
 pandas
-pickle
 psycopg2
 tqdm
 numpy
