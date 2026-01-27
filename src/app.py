@@ -13,14 +13,14 @@ import numpy as np
 from PIL import Image
 import io
 import os
-from dotenv import load_dotenv
+# from dotenv import load_dotenv
 import torch
 from transformers import AutoProcessor, AutoModel
 from tensorflow.image import resize as tf_resize
 from supabase import create_client, Client
 
 # Load environment variables
-load_dotenv()
+# load_dotenv()
 
 # Initialize FastAPI app
 app = FastAPI(
