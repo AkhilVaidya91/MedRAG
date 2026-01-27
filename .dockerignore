@@ -1,0 +1,10 @@
+.git
+.github
+.env
+*.ipynb
+notebooks/
+tests/
+.vscode
+__pycache__/
+*.pyc
+.DS_Store
