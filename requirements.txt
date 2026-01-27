@@ -8,3 +8,9 @@ numpy
 sentencepiece
 datasets
 huggingface_hub
+pillow
+torch
+transformers
+tensorflow
+supabase
+pydantic
