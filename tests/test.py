@@ -48,7 +48,7 @@ def verify_report(image_path: str, report_text: str, api_url: str = "https://akh
     if response.status_code == 200:
         return response.json()
     else:
-        raise Exception(f"API request failed with status {response.status_code}: {response.text}")
+        raise Exception(f"API request failed with status {response.status_code}")
 
 
 def main():

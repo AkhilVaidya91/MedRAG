@@ -86,17 +86,9 @@ async def startup_event():
 
 def resize_image(image: Image.Image) -> Image.Image:
     """
-    Resize image to 448x448 using TensorFlow's bilinear interpolation
-    to match MedSigLIP's training procedure
+    Resize image to 448x448
     """
-    image_array = np.array(image)
-    resized = tf_resize(
-        images=image_array,
-        size=[448, 448],
-        method='bilinear',
-        antialias=False
-    ).numpy().astype(np.uint8)
-    return Image.fromarray(resized)
+    return image.resize((448, 448), Image.BILINEAR)
 
 
 def generate_image_embedding(image: Image.Image) -> List[float]:
