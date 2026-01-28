@@ -15,7 +15,7 @@
 # # COPY --chown=user . /app
 # CMD ["uvicorn", "src.app:app", "--host", "0.0.0.0", "--port", "7860"]
 
-FROM python:3.13
+FROM python:3.12.10
 
 RUN useradd -m -u 1000 user
 
