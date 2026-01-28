@@ -9,7 +9,7 @@ datasets
 huggingface_hub
 pillow
 torch
-transformers
+transformers==2.19.1
 tensorflow
 supabase
 pydantic
