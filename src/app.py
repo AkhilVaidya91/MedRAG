@@ -119,8 +119,8 @@ def generate_image_embedding(image: Image.Image) -> List[float]:
     with torch.no_grad():
         outputs = model.get_image_features(**inputs)
     
-    # Convert to list and return
-    embedding = outputs.cpu().numpy()[0].tolist()
+    # Convert to list and return - outputs is already a tensor
+    embedding = outputs[0].cpu().numpy().tolist()
     return embedding
 
 
@@ -141,8 +141,8 @@ def generate_text_embedding(text: str) -> List[float]:
     with torch.no_grad():
         outputs = model.get_text_features(**inputs)
     
-    # Convert to list and return
-    embedding = outputs.cpu().numpy()[0].tolist()
+    # Convert to list and return - outputs is already a tensor
+    embedding = outputs[0].cpu().numpy().tolist()
     return embedding
 
 
