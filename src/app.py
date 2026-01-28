@@ -111,7 +111,7 @@ def generate_image_embedding(image: Image.Image) -> List[float]:
     
     # outputs is a tensor with shape [batch_size, embedding_dim]
     # We need to squeeze or select the first element, then move to CPU
-    embedding = outputs.squeeze().cpu().numpy().tolist()  # ✅ Use squeeze()
+    embedding = outputs[0].cpu().numpy().tolist()  # This works if outputs has shape [1, D]
     return embedding
 
 
@@ -125,7 +125,7 @@ def generate_text_embedding(text: str) -> List[float]:
         outputs = model.get_text_features(**inputs)
     
     # outputs is a tensor with shape [batch_size, embedding_dim]
-    embedding = outputs.squeeze().cpu().numpy().tolist()  # ✅ Use squeeze()
+    embedding = outputs[0].cpu().numpy().tolist()  # This works if outputs has shape [1, D]
     return embedding
 
 
