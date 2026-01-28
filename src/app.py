@@ -86,55 +86,46 @@ async def startup_event():
 
 def resize_image(image: Image.Image) -> Image.Image:
     """
-    Resize image to 448x448
+    Resize image to 448x448 using TensorFlow's bilinear interpolation
+    to match MedSigLIP's training procedure
     """
-    return image.resize((448, 448), Image.BILINEAR)
+    image_array = np.array(image)
+    resized = tf_resize(
+        images=image_array,
+        size=[448, 448],
+        method='bilinear',
+        antialias=False
+    ).numpy().astype(np.uint8)
+    return Image.fromarray(resized)
 
 
 def generate_image_embedding(image: Image.Image) -> List[float]:
     """
     Generate embedding for an image using MedSigLIP
-    
-    Args:
-        image: PIL Image object
-        
-    Returns:
-        List of floats representing the image embedding
     """
-    # Resize image to 448x448
     resized_image = resize_image(image)
-    
-    # Process image
     inputs = processor(images=resized_image, return_tensors="pt").to(device)
     
-    # Generate embedding
     with torch.no_grad():
         outputs = model.get_image_features(**inputs)
     
-    # Convert to list and return - outputs is already a tensor
-    embedding = outputs[0].cpu().numpy().tolist()
+    # outputs is a tensor with shape [batch_size, embedding_dim]
+    # We need to squeeze or select the first element, then move to CPU
+    embedding = outputs.squeeze().cpu().numpy().tolist()  # ✅ Use squeeze()
     return embedding
 
 
 def generate_text_embedding(text: str) -> List[float]:
     """
     Generate embedding for text using MedSigLIP
-    
-    Args:
-        text: Input text (up to 64 tokens)
-        
-    Returns:
-        List of floats representing the text embedding
     """
-    # Process text with max_length=64 (MedSigLIP's limit)
     inputs = processor(text=[text], padding="max_length", max_length=64, truncation=True, return_tensors="pt").to(device)
     
-    # Generate embedding
     with torch.no_grad():
         outputs = model.get_text_features(**inputs)
     
-    # Convert to list and return - outputs is already a tensor
-    embedding = outputs[0].cpu().numpy().tolist()
+    # outputs is a tensor with shape [batch_size, embedding_dim]
+    embedding = outputs.squeeze().cpu().numpy().tolist()  # ✅ Use squeeze()
     return embedding
 
 
