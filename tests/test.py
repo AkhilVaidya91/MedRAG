@@ -9,7 +9,7 @@ import sys
 from pathlib import Path
 
 
-def verify_report(image_path: str, report_text: str, api_url: str = "https://akhil-vaidya-medrag-backend.hf.space"):
+def verify_report(image_path: str, report_text: str, api_url: str = "http://localhost:8000") -> dict:
     """
     Send an X-ray image and report text to the verification API
     
@@ -67,7 +67,7 @@ def main():
     try:
         # Call the API
         result = verify_report(image_path, report_text)
-        
+        print(result)
         # Print results
         print("\n" + "=" * 60)
         print("Verification Results")

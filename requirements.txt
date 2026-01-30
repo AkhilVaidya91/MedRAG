@@ -14,3 +14,4 @@ tensorflow==2.19.1
 supabase==2.27.2
 pydantic==2.11.7
 python-multipart==0.0.21
+google-genai==1.32.0
