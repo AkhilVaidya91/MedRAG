@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Task Manager</title>
+    <title>AI-Assisted Radiology Report Verification</title>
     <style>
         * {
             margin: 0;
@@ -12,7 +12,7 @@
         }
 
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             min-height: 100vh;
             display: flex;
@@ -22,228 +22,544 @@
         }
 
         .container {
-            background: rgba(255, 255, 255, 0.95);
+            background: white;
             border-radius: 20px;
-            padding: 40px;
-            max-width: 500px;
-            width: 100%;
             box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            max-width: 900px;
+            width: 100%;
+            padding: 40px;
+            animation: fadeIn 0.5s ease-in;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
         }
 
         h1 {
-            color: #667eea;
-            margin-bottom: 30px;
+            color: #2d3748;
+            margin-bottom: 10px;
+            font-size: 28px;
             text-align: center;
-            font-size: 2em;
         }
 
-        .input-container {
-            display: flex;
-            gap: 10px;
+        .subtitle {
+            color: #718096;
+            text-align: center;
             margin-bottom: 30px;
+            font-size: 14px;
         }
 
-        input {
-            flex: 1;
-            padding: 12px 16px;
-            border: 2px solid #e0e0e0;
+        .form-group {
+            margin-bottom: 25px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            color: #2d3748;
+            font-weight: 600;
+            font-size: 14px;
+        }
+
+        .file-input-wrapper {
+            position: relative;
+            overflow: hidden;
+            display: inline-block;
+            width: 100%;
+        }
+
+        .file-input-wrapper input[type=file] {
+            position: absolute;
+            left: -9999px;
+        }
+
+        .file-input-label {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 15px;
+            background: #f7fafc;
+            border: 2px dashed #cbd5e0;
             border-radius: 10px;
-            font-size: 16px;
-            transition: border-color 0.3s;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            color: #4a5568;
+            font-weight: 500;
         }
 
-        input:focus {
+        .file-input-label:hover {
+            background: #edf2f7;
+            border-color: #667eea;
+        }
+
+        .file-input-label.has-file {
+            background: #e6fffa;
+            border-color: #38b2ac;
+            color: #234e52;
+        }
+
+        .file-name {
+            display: none;
+            margin-left: 10px;
+            font-size: 14px;
+            color: #2d3748;
+        }
+
+        .file-name.show {
+            display: inline;
+        }
+
+        textarea {
+            width: 100%;
+            min-height: 150px;
+            padding: 12px;
+            border: 2px solid #e2e8f0;
+            border-radius: 10px;
+            font-family: inherit;
+            font-size: 14px;
+            resize: vertical;
+            transition: border-color 0.3s ease;
+        }
+
+        textarea:focus {
             outline: none;
             border-color: #667eea;
         }
 
+        .button-group {
+            display: flex;
+            gap: 15px;
+            margin-top: 30px;
+        }
+
         button {
-            padding: 12px 24px;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
+            flex: 1;
+            padding: 15px 30px;
             border: none;
             border-radius: 10px;
             font-size: 16px;
             font-weight: 600;
             cursor: pointer;
-            transition: transform 0.2s, box-shadow 0.2s;
-        }
-
-        button:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
-        }
-
-        button:active {
-            transform: translateY(0);
-        }
-
-        .task-list {
-            list-style: none;
-        }
-
-        .task-item {
-            background: white;
-            padding: 16px;
-            border-radius: 10px;
-            margin-bottom: 10px;
+            transition: all 0.3s ease;
             display: flex;
-            justify-content: space-between;
             align-items: center;
-            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
-            transition: transform 0.2s, box-shadow 0.2s;
-            animation: slideIn 0.3s ease;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .btn-primary:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-primary:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        .btn-secondary {
+            background: #f7fafc;
+            color: #4a5568;
+            border: 2px solid #e2e8f0;
+        }
+
+        .btn-secondary:hover {
+            background: #edf2f7;
+        }
+
+        .spinner {
+            border: 3px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            border-top: 3px solid white;
+            width: 20px;
+            height: 20px;
+            animation: spin 1s linear infinite;
+            display: none;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .loading .spinner {
+            display: inline-block;
+        }
+
+        .loading .btn-text {
+            display: none;
+        }
+
+        .result-section {
+            margin-top: 30px;
+            padding: 25px;
+            border-radius: 10px;
+            display: none;
+            animation: slideIn 0.5s ease-out;
         }
 
         @keyframes slideIn {
             from {
                 opacity: 0;
-                transform: translateX(-20px);
+                transform: translateY(20px);
             }
             to {
                 opacity: 1;
-                transform: translateX(0);
+                transform: translateY(0);
             }
         }
 
-        .task-item:hover {
-            transform: translateX(5px);
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        .result-section.show {
+            display: block;
         }
 
-        .task-item.completed {
-            opacity: 0.6;
+        .result-correct {
+            background: #f0fdf4;
+            border: 2px solid #86efac;
         }
 
-        .task-item.completed .task-text {
-            text-decoration: line-through;
-            color: #999;
+        .result-incorrect {
+            background: #fef2f2;
+            border: 2px solid #fca5a5;
         }
 
-        .task-text {
-            flex: 1;
-            color: #333;
-            font-size: 16px;
-        }
-
-        .task-actions {
+        .result-header {
             display: flex;
-            gap: 8px;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 15px;
         }
 
-        .task-btn {
-            padding: 6px 12px;
-            font-size: 14px;
-            border-radius: 6px;
-            cursor: pointer;
-            border: none;
-            transition: opacity 0.2s;
+        .result-icon {
+            font-size: 24px;
         }
 
-        .task-btn:hover {
-            opacity: 0.8;
+        .result-title {
+            font-size: 20px;
+            font-weight: 700;
+            color: #2d3748;
         }
 
-        .complete-btn {
-            background: #48bb78;
-            color: white;
+        .result-content {
+            color: #4a5568;
+            line-height: 1.6;
         }
 
-        .delete-btn {
-            background: #f56565;
-            color: white;
+        .markdown-content {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            border: 1px solid #e2e8f0;
+            margin-top: 15px;
+            max-height: 400px;
+            overflow-y: auto;
         }
 
-        .empty-state {
-            text-align: center;
-            color: #999;
-            padding: 40px 20px;
-            font-size: 18px;
+        .markdown-content h1,
+        .markdown-content h2,
+        .markdown-content h3 {
+            margin-top: 15px;
+            margin-bottom: 10px;
+            color: #2d3748;
         }
 
-        .stats {
-            margin-top: 20px;
+        .markdown-content p {
+            margin-bottom: 10px;
+        }
+
+        .markdown-content ul,
+        .markdown-content ol {
+            margin-left: 20px;
+            margin-bottom: 10px;
+        }
+
+        .markdown-content strong {
+            font-weight: 700;
+            color: #2d3748;
+        }
+
+        .error-message {
+            background: #fef2f2;
+            border: 2px solid #fca5a5;
+            color: #991b1b;
             padding: 15px;
-            background: #f7fafc;
             border-radius: 10px;
-            text-align: center;
-            color: #667eea;
-            font-weight: 600;
+            margin-top: 20px;
+            display: none;
+        }
+
+        .error-message.show {
+            display: block;
+        }
+
+        .image-preview {
+            margin-top: 15px;
+            display: none;
+        }
+
+        .image-preview.show {
+            display: block;
+        }
+
+        .image-preview img {
+            max-width: 100%;
+            max-height: 300px;
+            border-radius: 10px;
+            border: 2px solid #e2e8f0;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 25px;
+            }
+
+            h1 {
+                font-size: 24px;
+            }
+
+            .button-group {
+                flex-direction: column;
+            }
         }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>✓ Task Manager</h1>
-        
-        <div class="input-container">
-            <input type="text" id="taskInput" placeholder="Add a new task..." />
-            <button onclick="addTask()">Add</button>
-        </div>
+        <h1>🏥 AI-Assisted Radiology Report Verification</h1>
+        <p class="subtitle">Upload an X-ray image and report text to verify accuracy using AI-powered analysis</p>
 
-        <ul class="task-list" id="taskList"></ul>
-        
-        <div class="stats" id="stats">
-            0 tasks remaining
+        <form id="verificationForm">
+            <div class="form-group">
+                <label for="imageInput">X-ray Image *</label>
+                <div class="file-input-wrapper">
+                    <input type="file" id="imageInput" accept="image/*" required>
+                    <label for="imageInput" class="file-input-label">
+                        <span>📁 Choose X-ray Image</span>
+                        <span class="file-name"></span>
+                    </label>
+                </div>
+                <div class="image-preview">
+                    <img id="previewImage" src="" alt="X-ray preview">
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label for="reportText">Radiology Report Text *</label>
+                <textarea 
+                    id="reportText" 
+                    placeholder="Enter the radiology report text here...
+Example:
+FINDINGS:
+
+The heart size is normal. The mediastinal contours are within normal limits...
+
+IMPRESSION:
+
+1. No acute cardiopulmonary process."
+                    required
+                ></textarea>
+            </div>
+
+            <div class="button-group">
+                <button type="submit" class="btn-primary" id="submitBtn">
+                    <span class="spinner"></span>
+                    <span class="btn-text">🔍 Verify Report</span>
+                </button>
+                <button type="button" class="btn-secondary" id="resetBtn">
+                    🔄 Reset
+                </button>
+            </div>
+        </form>
+
+        <div class="error-message" id="errorMessage"></div>
+
+        <div class="result-section" id="resultSection">
+            <div class="result-header">
+                <span class="result-icon" id="resultIcon"></span>
+                <h2 class="result-title" id="resultTitle"></h2>
+            </div>
+            <div class="result-content" id="resultContent"></div>
         </div>
     </div>
 
     <script>
-        let tasks = [];
+        const API_BASE_URL = 'https://akhil-vaidya-medrag-backend.hf.space';
+        
+        // DOM elements
+        const form = document.getElementById('verificationForm');
+        const imageInput = document.getElementById('imageInput');
+        const fileLabel = document.querySelector('.file-input-label');
+        const fileName = document.querySelector('.file-name');
+        const imagePreview = document.querySelector('.image-preview');
+        const previewImage = document.getElementById('previewImage');
+        const reportText = document.getElementById('reportText');
+        const submitBtn = document.getElementById('submitBtn');
+        const resetBtn = document.getElementById('resetBtn');
+        const resultSection = document.getElementById('resultSection');
+        const resultIcon = document.getElementById('resultIcon');
+        const resultTitle = document.getElementById('resultTitle');
+        const resultContent = document.getElementById('resultContent');
+        const errorMessage = document.getElementById('errorMessage');
 
-        function renderTasks() {
-            const taskList = document.getElementById('taskList');
-            const stats = document.getElementById('stats');
-            
-            if (tasks.length === 0) {
-                taskList.innerHTML = '<div class="empty-state">No tasks yet. Add one above!</div>';
-            } else {
-                taskList.innerHTML = tasks.map((task, index) => `
-                    <li class="task-item ${task.completed ? 'completed' : ''}">
-                        <span class="task-text">${task.text}</span>
-                        <div class="task-actions">
-                            ${!task.completed ? 
-                                `<button class="task-btn complete-btn" onclick="toggleTask(${index})">✓</button>` : 
-                                `<button class="task-btn complete-btn" onclick="toggleTask(${index})">↺</button>`
-                            }
-                            <button class="task-btn delete-btn" onclick="deleteTask(${index})">×</button>
-                        </div>
-                    </li>
-                `).join('');
-            }
-
-            const remaining = tasks.filter(t => !t.completed).length;
-            stats.textContent = `${remaining} task${remaining !== 1 ? 's' : ''} remaining`;
-        }
-
-        function addTask() {
-            const input = document.getElementById('taskInput');
-            const text = input.value.trim();
-            
-            if (text) {
-                tasks.push({ text, completed: false });
-                input.value = '';
-                renderTasks();
-            }
-        }
-
-        function toggleTask(index) {
-            tasks[index].completed = !tasks[index].completed;
-            renderTasks();
-        }
-
-        function deleteTask(index) {
-            tasks.splice(index, 1);
-            renderTasks();
-        }
-
-        document.getElementById('taskInput').addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') {
-                addTask();
+        // Handle file input change
+        imageInput.addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (file) {
+                fileName.textContent = file.name;
+                fileName.classList.add('show');
+                fileLabel.classList.add('has-file');
+                
+                // Show image preview
+                const reader = new FileReader();
+                reader.onload = function(event) {
+                    previewImage.src = event.target.result;
+                    imagePreview.classList.add('show');
+                };
+                reader.readAsDataURL(file);
             }
         });
 
-        renderTasks();
+        // Handle form submission
+        form.addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            // Hide previous results and errors
+            resultSection.classList.remove('show');
+            errorMessage.classList.remove('show');
+            
+            // Get form data
+            const file = imageInput.files[0];
+            const report = reportText.value.trim();
+            
+            if (!file || !report) {
+                showError('Please provide both an X-ray image and report text.');
+                return;
+            }
+
+            // Show loading state
+            submitBtn.classList.add('loading');
+            submitBtn.disabled = true;
+
+            try {
+                // Create FormData
+                const formData = new FormData();
+                formData.append('image', file);
+                formData.append('report_text', report);
+
+                // Make API request
+                const response = await fetch(`${API_BASE_URL}/api/verify-report`, {
+                    method: 'POST',
+                    body: formData
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json().catch(() => ({}));
+                    throw new Error(errorData.detail || `Server error: ${response.status}`);
+                }
+
+                const data = await response.json();
+                
+                // Display results
+                displayResults(data);
+
+            } catch (error) {
+                console.error('Error:', error);
+                showError(`Error: ${error.message}. Please check your connection and try again.`);
+            } finally {
+                // Remove loading state
+                submitBtn.classList.remove('loading');
+                submitBtn.disabled = false;
+            }
+        });
+
+        // Handle reset button
+        resetBtn.addEventListener('click', function() {
+            form.reset();
+            fileName.textContent = '';
+            fileName.classList.remove('show');
+            fileLabel.classList.remove('has-file');
+            imagePreview.classList.remove('show');
+            resultSection.classList.remove('show');
+            errorMessage.classList.remove('show');
+        });
+
+        // Display results function
+        function displayResults(data) {
+            const { isCorrect, correctReport } = data;
+
+            if (isCorrect) {
+                // Report is correct
+                resultSection.className = 'result-section result-correct show';
+                resultIcon.textContent = '✅';
+                resultTitle.textContent = 'Report Verified';
+                resultContent.innerHTML = '<p><strong>The radiology report is accurate and complete.</strong></p><p>No corrections are needed. The report properly describes the findings visible in the X-ray image.</p>';
+            } else {
+                // Report needs correction
+                resultSection.className = 'result-section result-incorrect show';
+                resultIcon.textContent = '⚠️';
+                resultTitle.textContent = 'Report Needs Correction';
+                resultContent.innerHTML = `
+                    <p><strong>The report has been reviewed and corrections are suggested:</strong></p>
+                    <div class="markdown-content">${parseMarkdown(correctReport)}</div>
+                `;
+            }
+
+            // Scroll to results
+            resultSection.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }
+
+        // Show error message
+        function showError(message) {
+            errorMessage.textContent = message;
+            errorMessage.classList.add('show');
+            errorMessage.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }
+
+        // Simple markdown parser
+        function parseMarkdown(markdown) {
+            if (!markdown) return '';
+            
+            let html = markdown;
+            
+            // Convert line breaks
+            html = html.replace(/\n\n/g, '</p><p>');
+            html = html.replace(/\n/g, '<br>');
+            
+            // Bold text
+            html = html.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+            html = html.replace(/__(.*?)__/g, '<strong>$1</strong>');
+            
+            // Wrap in paragraph if not already
+            if (!html.startsWith('<p>')) {
+                html = '<p>' + html + '</p>';
+            }
+            
+            return html;
+        }
+
+        // Test API connection on load
+        window.addEventListener('load', async function() {
+            try {
+                const response = await fetch(`${API_BASE_URL}/health`);
+                if (!response.ok) {
+                    console.warn('API health check failed');
+                }
+            } catch (error) {
+                console.warn('Could not connect to API:', error);
+            }
+        });
     </script>
 </body>
 </html>
