@@ -2,40 +2,28 @@ name: Sync to Hugging Face hub
 on:
   push:
     branches: [main]
-
-  # to run this workflow manually from the Actions tab
   workflow_dispatch:
 
 jobs:
   sync-to-hub:
     runs-on: ubuntu-latest
-    # steps:
-    #   - uses: actions/checkout@v3
-    #     with:
-    #       fetch-depth: 0
-    #       lfs: true
-    #   - name: Push to hub
-    #     env:
-    #       HF_TOKEN: ${{ secrets.HF_TOKEN }}
-    #     run: git push --force https://akhil-vaidya:$HF_TOKEN@huggingface.co/spaces/akhil-vaidya/MedRAG-backend main
-
-
     steps:
       - uses: actions/checkout@v3
-        with:
-          fetch-depth: 0
-          lfs: true
       
-      - name: Filter assets before push
+      - name: Create clean branch without history
         run: |
           git config --global user.email "action@github.com"
           git config --global user.name "GitHub Action"
           
-          git rm -rf assets || true
-          git commit -m "Remove assets for HF deployment" || true
+          # Remove assets
+          rm -rf assets
+          
+          # Create orphan branch (no parent commits = no history)
+          git checkout --orphan hf-deploy
+          git add .
+          git commit -m "Deploy to HuggingFace (no binary files)"
 
       - name: Push to hub
         env:
           HF_TOKEN: ${{ secrets.HF_TOKEN }}
-        # We push the current state to the HF remote
-        run: git push --force https://akhil-vaidya:$HF_TOKEN@huggingface.co/spaces/akhil-vaidya/MedRAG-backend main
+        run: git push --force https://akhil-vaidya:$HF_TOKEN@huggingface.co/spaces/akhil-vaidya/MedRAG-backend hf-deploy:main
