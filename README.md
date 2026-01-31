@@ -21,18 +21,17 @@ An AI-assisted tool for radiology report validation : MedGemma & MedSigLIP
 - Accepts an X-ray image and its radiology report, then returns:
 	- AI-powered verification of report completeness and quality assurance.
 	- Similar-case references with their associated reports.
-	- Visual analysis overlays and explanation to support clinical review.
 
 	How it works : workflow
 	- Upload: A radiologist uploads an X-ray image and the written radiology report.
 	- Retrieve: The system computes both image and text embeddings for the upload, then queries the vector database (Supabase) to retrieve similar cases using both modalities.
 	- Verify: Retrieved cases and their reports are aggregated and passed to an LLM-based verifier (ideally `MedGemma` served from an AWS SageMaker endpoint for production-quality clinical models). For this project, to reduce cost and enable reproducibility, the system currently uses `Gemini` for the verification and natural-language reasoning step.
-	- Output: The service returns a verification summary (completeness checks, discrepancies, suggested edits), similar-case references (with links to their reports), and visual analysis artifacts (overlays, heatmaps).
+	- Output: The service returns a verification summary (completeness checks, discrepancies, suggested edits) and similar-case references (with links to their reports).
 
 ### User flow
-	- Upload your X-ray image and the report text, then click verify.
-	- The app finds similar examples from a large medical dataset and checks whether your report is complete and consistent with those examples.
-	- It returns an easy-to-read summary and example reports you can review.
+- Upload your X-ray image and the report text, then click verify.
+- The app finds similar examples from a large medical dataset and checks whether your report is complete and consistent with those examples.
+- It returns an easy-to-read summary and example reports you can review.
 
 ### Live app
 
@@ -40,8 +39,8 @@ An AI-assisted tool for radiology report validation : MedGemma & MedSigLIP
 ![Frontend screenshot](assets/frontend.png)
 
 
-- Deployed frontend URL (add when available): https://akhilvaidya91.github.io/MedRAG/
-- Deployed backend API URL (add when available): https://akhil-vaidya-medrag-backend.hf.space/
+- Deployed frontend URL: https://akhilvaidya91.github.io/MedRAG/
+- Deployed backend API URL: https://akhil-vaidya-medrag-backend.hf.space/
 
 ### **Setup & Configuration : Overview**
 This section walks through everything needed to reproduce and run the MedRAG backend and ETL pipeline locally or on hosted infrastructure.
