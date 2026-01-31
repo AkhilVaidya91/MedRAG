@@ -12,12 +12,12 @@ pinned: false
 # MedRAG
 An AI-assisted tool for radiology report validation : MedGemma & MedSigLIP
 
-Short problem context
+### Short problem context
 - Radiologists need fast, reliable verification of X-ray findings and reports.
 - Manually searching for similar cases and validating report completeness is slow and error-prone.
 - MedRAG automates verification by matching uploaded X-rays and reports to similar cases, surfacing reference reports, and providing visual analysis.
 
-What this solution does
+### What this solution does
 - Accepts an X-ray image and its radiology report, then returns:
 	- AI-powered verification of report completeness and quality assurance.
 	- Similar-case references with their associated reports.
@@ -29,12 +29,12 @@ What this solution does
 	- Verify: Retrieved cases and their reports are aggregated and passed to an LLM-based verifier (ideally `MedGemma` served from an AWS SageMaker endpoint for production-quality clinical models). For this project, to reduce cost and enable reproducibility, the system currently uses `Gemini` for the verification and natural-language reasoning step.
 	- Output: The service returns a verification summary (completeness checks, discrepancies, suggested edits), similar-case references (with links to their reports), and visual analysis artifacts (overlays, heatmaps).
 
-	Short, non-developer explanation
+### User flow
 	- Upload your X-ray image and the report text, then click verify.
 	- The app finds similar examples from a large medical dataset and checks whether your report is complete and consistent with those examples.
-	- It returns an easy-to-read summary, example reports you can review, and images highlighting areas of interest.
+	- It returns an easy-to-read summary and example reports you can review.
 
-Screenshots / Live app
+### Live app
 
 
 ![Frontend screenshot](assets/frontend.png)
@@ -43,7 +43,7 @@ Screenshots / Live app
 - Deployed frontend URL (add when available): https://akhilvaidya91.github.io/MedRAG/
 - Deployed backend API URL (add when available): https://akhil-vaidya-medrag-backend.hf.space/
 
-**Setup & Configuration : Overview**
+### **Setup & Configuration : Overview**
 This section walks through everything needed to reproduce and run the MedRAG backend and ETL pipeline locally or on hosted infrastructure.
 
 **High-level steps**
@@ -69,11 +69,11 @@ This section walks through everything needed to reproduce and run the MedRAG bac
 	- Purpose: Produces normalized vector embeddings for medical images and associated text. Supports multimodal (image + text) representations enabling robust retrieval across modalities.
 	- Requirements: You must accept model terms on Hugging Face and provide an HF token (`HF_TOKEN`). Store `HF_TOKEN` in environment variables.
 
-Notes about embedding computation
+### Notes about embedding computation
 - Embedding creation is computationally intensive and requires GPU for reasonable throughput.
 - Example environment used: Kaggle P100 GPU instance (or equivalent NVIDIA GPU). CPU-only machines are not practical for full dataset embedding.
 
-**ETL / Embedding pipeline**
+### ETL / Embedding pipeline
 - The repository includes `notebooks/push_to_supabase.ipynb` which demonstrates fetching data, preprocessing, creating embeddings, and pushing them to Supabase.
 - Steps in the notebook:
 	1. Load dataset from Hugging Face / Parquet files.
@@ -81,7 +81,8 @@ Notes about embedding computation
 	3. Call `medsiglip-448` to create image and text embeddings (normalize vectors).
 	4. Upload metadata and embeddings to Supabase via its REST API or client.
 
-**Database (Supabase) setup**
+
+### Database (Supabase) setup
 - Database: Supabase (Postgres) with `pgvector` extension enabled for similarity search.
 - Table structure:
 
@@ -92,7 +93,7 @@ Notes about embedding computation
 	- `image_match(...)` - finds visually similar cases via image embeddings.
 	- `text_match(...)` - finds textually similar cases via report embeddings.
 
-SQL details : similarity search and inner product
+### SQL details : similarity search and inner product
 - Background: similarity search for embeddings commonly uses cosine similarity. When embeddings are normalized to unit length, cosine similarity and the inner (dot) product are mathematically equivalent.
 - Why inner product: inner-product computations are often faster and more straightforward to index in vector-enabled databases. With normalized vectors, ranking by inner product equals ranking by cosine similarity : this provides identical retrieval results but with performance benefits.
 - Implementation note: `function_setup.sql` creates helper functions that compute inner-product based scores and return top-k matches together with distances, making retrievals efficient for both image and text queries.
@@ -105,7 +106,7 @@ SQL details : similarity search and inner product
 
 ![Frontend screenshot](assets/supab_keys.png)
 
-**Environment variables**
+### Environment variables
 Set the following environment variables before running the backend or ETL steps (example names preserved):
 
 | Variable | Purpose |
@@ -115,7 +116,7 @@ Set the following environment variables before running the backend or ETL steps 
 | `SUPABASE_KEY` | Supabase API key (Publishable or service role depending on operation). |
 | `GEMINI_API_KEY` | API key for Gemini (AI inference). Generate at https://aistudio.google.com/app/api-keys |
 
-**Running the ETL / data push**
+### Running the ETL / data push
 1. Launch a GPU-enabled environment (Kaggle, Colab Pro, or cloud GPU instance).
 2. Install dependencies (prefer using a virtualenv or Conda):
 
@@ -125,7 +126,7 @@ pip install -r requirements.txt
 
 3. Open and run `notebooks/push_to_supabase.ipynb` top-to-bottom. Ensure `HF_TOKEN` and Supabase credentials are set in the notebook environment (or provided via environment variables).
 
-**Running the backend (local)**
+### Running the backend (local)
 1. Install Python dependencies:
 
 ```bash
@@ -149,12 +150,12 @@ python src/app.py
 
 4. API docs (FastAPI) are available at `http://localhost:8000/docs` when running locally. Use this to explore endpoints and test uploads.
 
-**Frontend**
+### Frontend
 - The static frontend is located in the `docs/` folder. It can be run locally by serving the folder (or opened directly if static HTML).
 - For local execution, point the frontend to `http://localhost:8000` (or your backend host) in its configuration.
 - Deployment options: Backend → Hugging Face Spaces or Cloud VM; Frontend → GitHub Pages (CI: GitHub Actions).
 
-**Docker & deployment**
+### Docker & deployment
 - Docker is supported via the included `Dockerfile`. Use Docker to containerize the backend for consistent deployments across environments.
 - Typical Docker workflow:
 
@@ -168,7 +169,7 @@ docker run -e HF_TOKEN="$HF_TOKEN" -e SUPABASE_URL="$SUPABASE_URL" -e SUPABASE_K
 
 - Hugging Face Spaces: You can deploy the backend to Hugging Face Spaces if the service fits their allowed patterns; serving static frontend on GitHub Pages is simpler. Docker makes either approach straightforward.
 
-**API endpoints (summary)**
+### API endpoints (summary)
 | Endpoint | Method | Purpose |
 |---|---:|---|
 | `/api/verify-report` | POST | Primary endpoint: accepts X-ray image + text report, returns verification summary, similar-case references, and visual artifacts. |
@@ -181,14 +182,14 @@ Refer to the running FastAPI docs at `/docs` for exact request/response schemas 
 
 ![Frontend screenshot](assets/api2.png)
 
-**RAG (Retrieval-Augmented Generation) explanation**
+### RAG (Retrieval-Augmented Generation) explanation
 - MedRAG uses a retrieval layer (Supabase + vector search) to find nearest neighbors (image and text) for the uploaded case. Retrieved cases and reports are used as context for an LLM (Gemini or other model) which performs QA, verification, and explanation.
 - Steps:
 	1. Compute embedding for uploaded image and/or report.
 	2. Query Supabase via `image_match` and `text_match` functions to find similar cases.
 	3. Pass top-k results to LLM as context + the user's report for verification and suggested edits.
 
-**Repository structure**
+### Repository structure
 | Path | Purpose |
 |---|---|
 | [src/app.py](src/app.py) | FastAPI backend entrypoint handling uploads and retrievals. |
