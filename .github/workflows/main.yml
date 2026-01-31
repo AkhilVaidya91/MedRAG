@@ -9,12 +9,33 @@ on:
 jobs:
   sync-to-hub:
     runs-on: ubuntu-latest
+    # steps:
+    #   - uses: actions/checkout@v3
+    #     with:
+    #       fetch-depth: 0
+    #       lfs: true
+    #   - name: Push to hub
+    #     env:
+    #       HF_TOKEN: ${{ secrets.HF_TOKEN }}
+    #     run: git push --force https://akhil-vaidya:$HF_TOKEN@huggingface.co/spaces/akhil-vaidya/MedRAG-backend main
+
+
     steps:
       - uses: actions/checkout@v3
         with:
           fetch-depth: 0
           lfs: true
+      
+      - name: Filter assets before push
+        run: |
+          git config --global user.email "action@github.com"
+          git config --global user.name "GitHub Action"
+          
+          git rm -rf assets || true
+          git commit -m "Remove assets for HF deployment" || true
+
       - name: Push to hub
         env:
           HF_TOKEN: ${{ secrets.HF_TOKEN }}
+        # We push the current state to the HF remote
         run: git push --force https://akhil-vaidya:$HF_TOKEN@huggingface.co/spaces/akhil-vaidya/MedRAG-backend main

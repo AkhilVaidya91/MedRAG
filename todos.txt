@@ -1,0 +1,12 @@
+MUST HAVES
+
+1. documentation
+2. re-ranker
+3. health check and monitoring
+4. user gets to see similar records
+5. tests
+
+GOOD TO HAVES
+
+1. Bucket instead of in DB
+2. restructure
