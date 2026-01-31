@@ -56,7 +56,7 @@ This section walks through everything needed to reproduce and run the MedRAG bac
 - Official dataset used: MIMIC-CXR
 	- Link: https://physionet.org/content/mimic-cxr/2.1.0/
 	- About: Chest X-ray images paired with radiology reports collected from clinical care. Contains images, associated DICOM metadata, and free-text radiology reports.
-	- Typical size: hundreds of thousands of image-report pairs (see dataset page for exact counts and licensing).
+	- Size: Over thirty thousand image-report pairs.
 
 **Data source used in pipeline**
 - Hugging Face dataset (parquet formatted files): https://huggingface.co/datasets/itsanmolgupta/mimic-cxr-dataset
