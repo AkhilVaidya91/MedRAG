@@ -23,9 +23,9 @@ from google import genai
 # Monitoring Imports
 from prometheus_fastapi_instrumentator import Instrumentator
 from prometheus_client import Histogram
-from dotenv import load_dotenv
+# from dotenv import load_dotenv
 
-load_dotenv()
+# load_dotenv()
 
 # Initialize FastAPI app
 app = FastAPI(
