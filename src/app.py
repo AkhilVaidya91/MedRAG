@@ -57,6 +57,21 @@ class ReportAnalysisResult(BaseModel):
     correctReport: str
 
 
+class SimilarCase(BaseModel):
+    """Reference case details returned to the client"""
+    id: int
+    findings: str
+    impression: str
+    imageBase64: str
+
+
+class ReportVerificationResponse(BaseModel):
+    """API response including Gemini verdict and supporting cases"""
+    isCorrect: bool
+    correctReport: str
+    referenceCases: List[SimilarCase]
+
+
 def initialize_model():
     """Initialize MedSigLIP model and processor"""
     global device, model, processor
@@ -165,7 +180,7 @@ def generate_text_embedding(text: str) -> List[float]:
     return embedding
 
 
-def search_similar_images(image_embedding: List[float], top_k: int = 50) -> List[dict]:
+def search_similar_images(image_embedding: List[float], top_k: int = 5) -> List[dict]:
     """
     Search for similar images in the database using negative inner product
     
@@ -189,7 +204,7 @@ def search_similar_images(image_embedding: List[float], top_k: int = 50) -> List
     return response.data
 
 
-def search_similar_texts(text_embedding: List[float], top_k: int = 50) -> List[dict]:
+def search_similar_texts(text_embedding: List[float], top_k: int = 5) -> List[dict]:
     """
     Search for similar texts in the database using negative inner product
     
@@ -570,7 +585,7 @@ def analyze_with_gemini(user_image: Image.Image, user_report: str, similar_cases
         raise HTTPException(status_code=500, detail=f"Error during Gemini analysis: {str(e)}")
 
 
-@app.post("/api/verify-report", response_model=ReportAnalysisResult)
+@app.post("/api/verify-report", response_model=ReportVerificationResponse)
 async def verify_radiology_report(
     image: UploadFile = File(..., description="X-ray image file"),
     report_text: str = Form(..., description="Radiology report text")
@@ -580,20 +595,20 @@ async def verify_radiology_report(
     
     This endpoint:
     1. Generates embeddings for the uploaded image and report text using MedSigLIP
-    2. Searches for top 50 similar images in the database
-    3. Searches for top 50 similar texts in the database
+    2. Searches for top 5 similar images in the database
+    3. Searches for top 5 similar texts in the database
     4. Combines results by adding similarity scores and selects top 3
     5. Fetches full data (image + findings + impression) for top 3 reports
     6. Creates a structured prompt with user's data and similar cases
     7. Sends to Gemini for analysis
-    8. Returns structured JSON with isCorrect and correctReport fields
+    8. Returns structured JSON with Gemini verdict and reference case payload
     
     Args:
         image: Uploaded X-ray image file
         report_text: Text of the radiology report
         
     Returns:
-        ReportAnalysisResult with isCorrect boolean and correctReport string
+        ReportVerificationResponse containing Gemini verdict and reference cases
     """
     try:
         print("\n" + "="*80)
@@ -617,8 +632,8 @@ async def verify_radiology_report(
         
         # Search for similar images and texts
         print("\n[API] Step 3: Searching for similar cases...")
-        similar_images = search_similar_images(image_embedding, top_k=50)
-        similar_texts = search_similar_texts(text_embedding, top_k=50)
+        similar_images = search_similar_images(image_embedding, top_k=5)
+        similar_texts = search_similar_texts(text_embedding, top_k=5)
         
         # Combine and rank results to get top 3
         print("\n[API] Step 4: Combining and ranking to get top 3 cases...")
@@ -642,7 +657,21 @@ async def verify_radiology_report(
         print(f"[API] Verification complete - Report is {'CORRECT' if analysis_result.isCorrect else 'INCORRECT'}")
         print("="*80 + "\n")
         
-        return analysis_result
+        reference_cases = [
+            SimilarCase(
+                id=case.get('id', 0),
+                findings=case.get('findings', ''),
+                impression=case.get('impression', ''),
+                imageBase64=case.get('image_base64', '')
+            )
+            for case in similar_cases
+        ]
+
+        return ReportVerificationResponse(
+            isCorrect=analysis_result.isCorrect,
+            correctReport=analysis_result.correctReport,
+            referenceCases=reference_cases
+        )
         
     except HTTPException:
         raise
