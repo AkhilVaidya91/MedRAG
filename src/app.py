@@ -19,27 +19,57 @@ import torch
 from transformers import AutoProcessor, AutoModel
 from tensorflow.image import resize as tf_resize
 from supabase import create_client, Client
-# import google as genai
 from google import genai
-# from dotenv import load_dotenv
+# Monitoring Imports
+from prometheus_fastapi_instrumentator import Instrumentator
+from prometheus_client import Histogram
+from dotenv import load_dotenv
 
-# load_dotenv()
+load_dotenv()
 
 # Initialize FastAPI app
 app = FastAPI(
     title="Radiology Report Verification API",
     description="AI-powered radiology report verification using MedSigLIP embeddings and Gemini analysis",
-    version="2.0.0"
+    version="2.1.0"
 )
 
 # CORS middleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Configure appropriately for production
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# --- MONITORING METRICS DEFINITIONS ---
+# We define Histograms to track the duration of specific pipeline stages.
+# Buckets are tuned for expected latencies (e.g., embeddings are fast, LLMs are slow).
+
+METRIC_EMBEDDING_LATENCY = Histogram(
+    "medrag_embedding_generation_seconds",
+    "Time spent generating MedSigLIP embeddings for image and text",
+    buckets=[0.1, 0.25, 0.5, 0.75, 1.0, 2.5, 5.0]
+)
+
+METRIC_RETRIEVAL_LATENCY = Histogram(
+    "medrag_supabase_retrieval_seconds",
+    "Time spent searching vector DB and fetching full report data",
+    buckets=[0.1, 0.5, 1.0, 2.0, 3.0, 5.0, 8.0]
+)
+
+METRIC_LLM_LATENCY = Histogram(
+    "medrag_gemini_analysis_seconds",
+    "Time spent waiting for Gemini generation",
+    buckets=[1.0, 2.5, 5.0, 7.5, 10.0, 15.0, 20.0, 30.0]
+)
+# --------------------------------------
+
+# Initialize Prometheus instrumentation before the app starts so middleware registration succeeds.
+instrumentator = Instrumentator()
+instrumentator.instrument(app).expose(app)
+print("[INIT] Prometheus metrics endpoint configured at /metrics")
 
 # Global variables for model and clients
 device = None
@@ -108,32 +138,27 @@ def initialize_gemini():
     if not gemini_api_key:
         raise ValueError("GEMINI_API_KEY must be set in environment variables")
 
-    # Configure the genai library and create a client.
-    # Use genai.configure for backwards compatibility and then instantiate Client().
     try:
         genai.configure(api_key=gemini_api_key)
     except Exception:
-        # Some library versions may not have configure; ignore if it fails and pass api_key to Client
         pass
 
-    # Create client instance. Client may accept api_key or rely on configured env.
     try:
         genai_client = genai.Client(api_key=gemini_api_key)
     except TypeError:
         genai_client = genai.Client()
 
-    # We don't need to fetch a model object via `models.get()`; use client.models.generate_content
     gemini_model = None
-
     print("[INIT] Gemini client initialized!")
 
 
 @app.on_event("startup")
 async def startup_event():
-    """Initialize model, Supabase client, and Gemini on startup"""
+    """Initialize model, Supabase client, Gemini, and Monitoring on startup"""
     initialize_model()
     initialize_supabase()
     initialize_gemini()
+    print("[INIT] Prometheus metrics endpoint exposed at /metrics")
 
 
 def resize_image(image: Image.Image) -> Image.Image:
@@ -183,13 +208,6 @@ def generate_text_embedding(text: str) -> List[float]:
 def search_similar_images(image_embedding: List[float], top_k: int = 5) -> List[dict]:
     """
     Search for similar images in the database using negative inner product
-    
-    Args:
-        image_embedding: Query image embedding
-        top_k: Number of results to return
-        
-    Returns:
-        List of dicts with id and similarity score
     """
     print(f"[SEARCH] Searching for top {top_k} similar images...")
     response = supabase.rpc(
@@ -207,13 +225,6 @@ def search_similar_images(image_embedding: List[float], top_k: int = 5) -> List[
 def search_similar_texts(text_embedding: List[float], top_k: int = 5) -> List[dict]:
     """
     Search for similar texts in the database using negative inner product
-    
-    Args:
-        text_embedding: Query text embedding
-        top_k: Number of results to return
-        
-    Returns:
-        List of dicts with id and similarity score
     """
     print(f"[SEARCH] Searching for top {top_k} similar texts...")
     response = supabase.rpc(
@@ -231,27 +242,16 @@ def search_similar_texts(text_embedding: List[float], top_k: int = 5) -> List[di
 def combine_and_rank_results(image_results: List[dict], text_results: List[dict], top_k: int = 3) -> List[int]:
     """
     Combine image and text search results, add similarity scores, and return top K IDs
-    
-    Args:
-        image_results: Results from image similarity search
-        text_results: Results from text similarity search
-        top_k: Number of final results to return (default 3)
-        
-    Returns:
-        List of top K report IDs
     """
     print(f"[RANKING] Combining and ranking results to get top {top_k}...")
     
-    # Create a dictionary to store combined scores
     combined_scores = {}
     
-    # Add image similarity scores (convert negative inner product to positive similarity)
     for result in image_results:
         report_id = result['id']
         similarity = -result['similarity']
         combined_scores[report_id] = similarity
     
-    # Add text similarity scores
     for result in text_results:
         report_id = result['id']
         similarity = -result['similarity']
@@ -261,7 +261,6 @@ def combine_and_rank_results(image_results: List[dict], text_results: List[dict]
         else:
             combined_scores[report_id] = similarity
     
-    # Sort by combined score (highest first) and get top K IDs
     sorted_ids = sorted(combined_scores.keys(), key=lambda x: combined_scores[x], reverse=True)
     top_ids = sorted_ids[:top_k]
     
@@ -272,12 +271,6 @@ def combine_and_rank_results(image_results: List[dict], text_results: List[dict]
 def fetch_full_report_data(report_ids: List[int]) -> List[dict]:
     """
     Fetch full report data including base64 image, findings, and impression from Supabase
-    
-    Args:
-        report_ids: List of report IDs to fetch
-        
-    Returns:
-        List of dicts containing full report data
     """
     print(f"[FETCH] Fetching full data for {len(report_ids)} reports...")
     
@@ -286,8 +279,6 @@ def fetch_full_report_data(report_ids: List[int]) -> List[dict]:
     for report_id in report_ids:
         print(f"[FETCH] Fetching report ID: {report_id}")
         
-        # Fetch the report metadata from database
-        # The Supabase table in this project is named `radiology_report` (not `reports`)
         response = supabase.table('radiology_report').select('*').eq('id', report_id).execute()
 
         if not response.data or len(response.data) == 0:
@@ -296,10 +287,8 @@ def fetch_full_report_data(report_ids: List[int]) -> List[dict]:
 
         report_data = response.data[0]
 
-        # First try to get an in-table base64 image (column `image_base64`) if present
         image_base64 = report_data.get('image_base64')
 
-        # Fallback: if no base64 column, try to download from storage using `image_path` if available
         if not image_base64:
             image_path = report_data.get('image_path')
 
@@ -311,7 +300,6 @@ def fetch_full_report_data(report_ids: List[int]) -> List[dict]:
                 print(f"[FETCH] Downloading image from storage: {image_path}")
                 image_response = supabase.storage.from_('radiology-images').download(image_path)
 
-                # The storage client may return raw bytes or an object containing bytes
                 if isinstance(image_response, (bytes, bytearray)):
                     raw_bytes = image_response
                 elif isinstance(image_response, dict) and 'data' in image_response:
@@ -319,7 +307,6 @@ def fetch_full_report_data(report_ids: List[int]) -> List[dict]:
                 elif hasattr(image_response, 'read'):
                     raw_bytes = image_response.read()
                 else:
-                    # Try to use it directly
                     raw_bytes = image_response
 
                 image_base64 = base64.b64encode(raw_bytes).decode('utf-8')
@@ -329,7 +316,6 @@ def fetch_full_report_data(report_ids: List[int]) -> List[dict]:
                 print(f"[FETCH] Error downloading image for report ID {report_id}: {str(e)}")
                 continue
 
-        # Compile the full report data using available fields
         full_report = {
             'id': report_id,
             'image_base64': image_base64,
@@ -344,37 +330,12 @@ def fetch_full_report_data(report_ids: List[int]) -> List[dict]:
     return full_reports
 
 
-def image_to_base64(image: Image.Image) -> str:
-    """
-    Convert PIL Image to base64 string
-    
-    Args:
-        image: PIL Image object
-        
-    Returns:
-        Base64 encoded string
-    """
-    buffered = io.BytesIO()
-    image.save(buffered, format="PNG")
-    img_base64 = base64.b64encode(buffered.getvalue()).decode('utf-8')
-    return img_base64
-
-
 def create_prompt_template(user_image_base64: str, user_report: str, similar_cases: List[dict]) -> str:
     """
     Create a structured prompt template for Gemini analysis
-    
-    Args:
-        user_image_base64: Base64 encoded user's X-ray image
-        user_report: User's radiology report text
-        similar_cases: List of similar cases with images and reports
-        
-    Returns:
-        Formatted prompt string
     """
     print("[PROMPT] Creating structured prompt template...")
     
-    # Use unique placeholders to avoid conflicts with JSON braces in the prompt
     prompt = """You are an expert radiologist assistant tasked with verifying the completeness and accuracy of a radiology report.
 
 **TASK:**
@@ -392,7 +353,6 @@ Below are __NUM_CASES__ similar cases from the database for your reference. Thes
 
 """
     
-    # Add similar cases to the prompt
     for idx, case in enumerate(similar_cases, 1):
         prompt += f"""
 **Reference Case {idx} (ID: {case['id']}):**
@@ -427,17 +387,8 @@ Respond ONLY with a valid JSON object in the following format:
 - The corrected report should be in the same format as the original (with Findings and Impression sections)
 - Do NOT include any additional text, explanations, or markdown formatting - ONLY the JSON object
 - Ensure the JSON is valid and properly formatted
-
-**Examples:**
-
-If report is correct:
-{"isCorrect": true, "correctReport": ""}
-
-If report needs correction:
-{"isCorrect": false, "correctReport": "FINDINGS:\\n\\nThe chest X-ray demonstrates...\\n\\nIMPRESSION:\\n\\n1. ..."}
 """
     
-    # Replace placeholders safely (avoid str.format because the prompt contains many JSON-style braces)
     prompt = prompt.replace("__USER_REPORT__", user_report).replace("__NUM_CASES__", str(len(similar_cases)))
 
     print(f"[PROMPT] Prompt template created (length: {len(prompt)} characters)")
@@ -447,32 +398,18 @@ If report needs correction:
 def analyze_with_gemini(user_image: Image.Image, user_report: str, similar_cases: List[dict]) -> ReportAnalysisResult:
     """
     Analyze the radiology report using Gemini with multimodal input
-    
-    Args:
-        user_image: User's X-ray PIL Image
-        user_report: User's radiology report text
-        similar_cases: List of similar cases with base64 images and reports
-        
-    Returns:
-        ReportAnalysisResult with isCorrect and correctReport fields
     """
     print("[GEMINI] Starting Gemini analysis...")
     
-    # Prepare the prompt
     prompt_text = create_prompt_template("", user_report, similar_cases)
-    
-    # Prepare the multimodal content list
     content_parts = [prompt_text]
     
-    # Add user's image first
     print("[GEMINI] Adding user's X-ray image to content...")
     content_parts.append(user_image)
     
-    # Add similar case images
     for idx, case in enumerate(similar_cases, 1):
         print(f"[GEMINI] Adding reference case {idx} image to content...")
         try:
-            # Decode base64 image
             image_bytes = base64.b64decode(case['image_base64'])
             case_image = Image.open(io.BytesIO(image_bytes)).convert("RGB")
             content_parts.append(case_image)
@@ -481,13 +418,10 @@ def analyze_with_gemini(user_image: Image.Image, user_report: str, similar_cases
     
     print(f"[GEMINI] Total content parts prepared: {len(content_parts)} (1 text + {len(content_parts)-1} images)")
     
-    # Generate response from Gemini using structured outputs if available
     try:
         print("[GEMINI] Sending structured-output request to Gemini API...")
 
-        # Prefer using the genai client with JSON schema support for structured outputs
         if genai_client is not None:
-            # Use our Pydantic model schema to request JSON output
             response = genai_client.models.generate_content(
                 model=GEMINI_MODEL_NAME,
                 contents=content_parts,
@@ -500,9 +434,7 @@ def analyze_with_gemini(user_image: Image.Image, user_report: str, similar_cases
             )
 
             print("[GEMINI] Received structured response from Gemini")
-            print(f"[GEMINI] Raw response text: {response.text[:200]}...")
-
-            # Validate and parse into our Pydantic model
+            
             try:
                 parsed = ReportAnalysisResult.model_validate_json(response.text)
                 print(f"[GEMINI] Parsed structured output - isCorrect: {parsed.isCorrect}")
@@ -510,7 +442,6 @@ def analyze_with_gemini(user_image: Image.Image, user_report: str, similar_cases
             except Exception as e:
                 print(f"[GEMINI] Structured parse failed: {str(e)}. Falling back to tolerant parsing.")
 
-        # Fallback: call the genai client directly for text generation
         print("[GEMINI] Sending fallback request to Gemini API via genai_client.models.generate_content...")
         response = genai_client.models.generate_content(
             model=GEMINI_MODEL_NAME,
@@ -522,9 +453,7 @@ def analyze_with_gemini(user_image: Image.Image, user_report: str, similar_cases
         )
 
         print("[GEMINI] Received response from Gemini")
-        print(f"[GEMINI] Raw response text: {response.text[:200]}...")
-
-        # Clean the response text (remove any markdown formatting if present)
+        
         import json
         response_text = response.text.strip()
         if response_text.startswith("```json"):
@@ -535,9 +464,6 @@ def analyze_with_gemini(user_image: Image.Image, user_report: str, similar_cases
             response_text = response_text[:-3]
         response_text = response_text.strip()
 
-        print(f"[GEMINI] Cleaned response text: {response_text[:200]}...")
-
-        # Try to parse JSON directly
         try:
             result_json = json.loads(response_text)
             print(f"[GEMINI] Parsed JSON successfully - isCorrect: {result_json.get('isCorrect')}")
@@ -547,8 +473,7 @@ def analyze_with_gemini(user_image: Image.Image, user_report: str, similar_cases
             )
         except json.JSONDecodeError:
             print("[GEMINI] JSON parse failed on fallback, attempting salvage and regex extraction")
-
-            # Salvage substring between first { and last }
+            
             start = response_text.find('{')
             end = response_text.rfind('}')
             if start != -1 and end != -1 and end > start:
@@ -562,7 +487,6 @@ def analyze_with_gemini(user_image: Image.Image, user_report: str, similar_cases
                 except json.JSONDecodeError:
                     pass
 
-            # Final fallback: regex extraction
             import re
             is_correct = False
             m = re.search(r'"isCorrect"\s*:\s*(true|false)', response_text, re.IGNORECASE)
@@ -591,24 +515,7 @@ async def verify_radiology_report(
     report_text: str = Form(..., description="Radiology report text")
 ):
     """
-    Verify a radiology report by finding similar cases and analyzing with Gemini
-    
-    This endpoint:
-    1. Generates embeddings for the uploaded image and report text using MedSigLIP
-    2. Searches for top 5 similar images in the database
-    3. Searches for top 5 similar texts in the database
-    4. Combines results by adding similarity scores and selects top 3
-    5. Fetches full data (image + findings + impression) for top 3 reports
-    6. Creates a structured prompt with user's data and similar cases
-    7. Sends to Gemini for analysis
-    8. Returns structured JSON with Gemini verdict and reference case payload
-    
-    Args:
-        image: Uploaded X-ray image file
-        report_text: Text of the radiology report
-        
-    Returns:
-        ReportVerificationResponse containing Gemini verdict and reference cases
+    Verify a radiology report with monitoring instrumentation
     """
     try:
         print("\n" + "="*80)
@@ -625,33 +532,36 @@ async def verify_radiology_report(
             print(f"[API] Error: Invalid image file - {str(e)}")
             raise HTTPException(status_code=400, detail=f"Invalid image file: {str(e)}")
         
-        # Generate embeddings
+        # --- MONITORING: TRACK EMBEDDING GENERATION TIME ---
         print("\n[API] Step 2: Generating embeddings...")
-        image_embedding = generate_image_embedding(pil_image)
-        text_embedding = generate_text_embedding(report_text)
+        with METRIC_EMBEDDING_LATENCY.time():
+            image_embedding = generate_image_embedding(pil_image)
+            text_embedding = generate_text_embedding(report_text)
+        # ---------------------------------------------------
         
-        # Search for similar images and texts
-        print("\n[API] Step 3: Searching for similar cases...")
-        similar_images = search_similar_images(image_embedding, top_k=5)
-        similar_texts = search_similar_texts(text_embedding, top_k=5)
-        
-        # Combine and rank results to get top 3
-        print("\n[API] Step 4: Combining and ranking to get top 3 cases...")
-        top_3_ids = combine_and_rank_results(similar_images, similar_texts, top_k=3)
-        
-        # Fetch full report data for top 3
-        print("\n[API] Step 5: Fetching full data for top 3 reports...")
-        similar_cases = fetch_full_report_data(top_3_ids)
-        
-        if len(similar_cases) == 0:
-            print("[API] Error: No similar cases could be retrieved")
-            raise HTTPException(status_code=500, detail="Failed to retrieve similar cases from database")
+        # --- MONITORING: TRACK RETRIEVAL (SEARCH + RANK + FETCH) TIME ---
+        print("\n[API] Steps 3-5: Searching, Ranking, and Fetching similar cases...")
+        similar_cases = []
+        with METRIC_RETRIEVAL_LATENCY.time():
+            similar_images = search_similar_images(image_embedding, top_k=5)
+            similar_texts = search_similar_texts(text_embedding, top_k=5)
+            
+            top_3_ids = combine_and_rank_results(similar_images, similar_texts, top_k=3)
+            
+            similar_cases = fetch_full_report_data(top_3_ids)
+            
+            if len(similar_cases) == 0:
+                print("[API] Error: No similar cases could be retrieved")
+                raise HTTPException(status_code=500, detail="Failed to retrieve similar cases from database")
+        # ---------------------------------------------------
         
         print(f"[API] Successfully retrieved {len(similar_cases)} similar cases")
         
-        # Analyze with Gemini
+        # --- MONITORING: TRACK GEMINI LLM TIME ---
         print("\n[API] Step 6: Analyzing report with Gemini...")
-        analysis_result = analyze_with_gemini(pil_image, report_text, similar_cases)
+        with METRIC_LLM_LATENCY.time():
+            analysis_result = analyze_with_gemini(pil_image, report_text, similar_cases)
+        # -----------------------------------------
         
         print("\n" + "="*80)
         print(f"[API] Verification complete - Report is {'CORRECT' if analysis_result.isCorrect else 'INCORRECT'}")
@@ -690,7 +600,8 @@ async def health_check():
         "model_device": str(device),
         "medsiglip_loaded": model is not None,
         "supabase_connected": supabase is not None,
-        "gemini_initialized": gemini_model is not None
+        "gemini_initialized": gemini_model is not None,
+        "monitoring": "enabled"
     }
 
 

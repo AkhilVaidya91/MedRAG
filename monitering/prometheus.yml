@@ -1,0 +1,23 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+scrape_configs:
+  - job_name: 'hf-radiology-backend'
+    scheme: https
+    static_configs:
+      - targets: ['akhil-vaidya-medrag-backend.hf.space']
+
+
+
+######### running this if monitoring the locall dev backend #########
+# global:
+#   scrape_interval: 5s # Faster interval for local debugging (optional)
+#   evaluation_interval: 5s
+
+# scrape_configs:
+#   - job_name: 'local-radiology-backend'
+#     # scheme: https  <-- REMOVE THIS (Localhost uses HTTP, not HTTPS)
+#     static_configs:
+#       # Use 'host.docker.internal' to let Docker talk to your PC's localhost
+#       - targets: ['host.docker.internal:8000']

@@ -2,6 +2,4 @@ MUST HAVES
 
 1. documentation - keep updating
 3. health check and monitoring - promethius and grafana
-4. user gets to see similar records
-5. tests
 6. refactor

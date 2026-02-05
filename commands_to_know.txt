@@ -4,3 +4,8 @@ curl https://akhil-vaidya-medrag-backend.hf.space/hello
 https://akhilvaidya91.github.io/MedRAG/
 
 python tests/test.py tests/img.png "The lungs are clear of focal consolidation, pleural effusion or pneumothorax. The heart size is normal. The mediastinal contours are normal. Multiple surgical clips project over the left breast, and old left rib fractures are noted."
+
+docker-compose up -d
+
+http://localhost:3000/ --> grafana (admin/admin)
+http://localhost:9090/ --> promethius
