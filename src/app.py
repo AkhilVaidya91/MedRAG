@@ -43,10 +43,6 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# --- MONITORING METRICS DEFINITIONS ---
-# We define Histograms to track the duration of specific pipeline stages.
-# Buckets are tuned for expected latencies (e.g., embeddings are fast, LLMs are slow).
-
 METRIC_EMBEDDING_LATENCY = Histogram(
     "medrag_embedding_generation_seconds",
     "Time spent generating MedSigLIP embeddings for image and text",

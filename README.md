@@ -20,7 +20,7 @@ An AI-assisted tool for radiology report validation : MedGemma & MedSigLIP
 ### What this solution does
 - Accepts an X-ray image and its radiology report, then returns:
 	- AI-powered verification of report completeness and quality assurance.
-	- Similar-case references with their associated reports.
+	- Top 3 similar-case references with their associated reports for comparison.
 
 	How it works : workflow
 	- Upload: A radiologist uploads an X-ray image and the written radiology report.
@@ -30,13 +30,14 @@ An AI-assisted tool for radiology report validation : MedGemma & MedSigLIP
 
 ### User flow
 - Upload your X-ray image and the report text, then click verify.
-- The app finds similar examples from a large medical dataset and checks whether your report is complete and consistent with those examples.
-- It returns an easy-to-read summary and example reports you can review.
+- The app finds the top 3 most similar examples from a large medical dataset and checks whether your report is complete and consistent with those examples.
+- It returns an easy-to-read summary, verification details, and the top 3 similar case reports you can review and compare against.
 
 ### Live app
 
 
-![Frontend screenshot](assets/frontend.png)
+![Frontend screenshot](assets/frontend1.png)
+![Frontend screenshot](assets/frontend2.png)
 
 
 - Deployed frontend URL: https://akhilvaidya91.github.io/MedRAG/
@@ -168,10 +169,36 @@ docker run -e HF_TOKEN="$HF_TOKEN" -e SUPABASE_URL="$SUPABASE_URL" -e SUPABASE_K
 
 - Hugging Face Spaces: You can deploy the backend to Hugging Face Spaces if the service fits their allowed patterns; serving static frontend on GitHub Pages is simpler. Docker makes either approach straightforward.
 
+### Monitoring setup (local)
+- The repository includes a monitoring stack using Prometheus and Grafana located in the `monitering/` folder.
+
+![Frontend screenshot](assets/monitoring.png)
+
+- **How it works:**
+	- Prometheus scrapes metrics from the backend API (either local or deployed).
+	- Grafana provides visualization dashboards for monitoring API performance, request rates, and health metrics.
+- **Setup steps:**
+	1. Navigate to the `monitering/` folder:
+	```bash
+	cd monitering
+	```
+	2. Start the monitoring stack:
+	```bash
+	docker-compose up -d
+	```
+	3. Access the monitoring tools:
+		- **Prometheus**: http://localhost:9090
+		- **Grafana**: http://localhost:3000 (default login: `admin`/`admin`)
+- **Configuration:**
+	- `prometheus.yml`: Controls scrape targets and intervals. By default configured for the deployed backend, but includes commented configuration for local development.
+	- For **local monitoring**: Uncomment the local configuration section in `prometheus.yml` which uses `host.docker.internal:8000` to monitor your local backend.
+	- For **deployed backend monitoring**: Use the default HTTPS configuration targeting the Hugging Face Space URL.
+- **Note:** The monitoring stack currently works locally and requires the backend to expose Prometheus-compatible metrics endpoints.
+
 ### API endpoints (summary)
 | Endpoint | Method | Purpose |
 |---|---:|---|
-| `/api/verify-report` | POST | Primary endpoint: accepts X-ray image + text report, returns verification summary, similar-case references, and visual artifacts. |
+| `/api/verify-report` | POST | Primary endpoint: accepts X-ray image + text report, returns verification summary, top 3 similar-case references, and visual artifacts. |
 | `/docs` | GET | FastAPI OpenAPI UI for interactive API exploration and testing. |
 | `/health` | GET | Lightweight healthcheck endpoint for monitoring and readiness checks. |
 

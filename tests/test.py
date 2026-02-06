@@ -96,4 +96,5 @@ def test_verification_workflow():
 if __name__ == "__main__":
     server_up = test_health()
     if server_up:
-        test_verification_workflow()
+        for i in range(3):
+            test_verification_workflow()

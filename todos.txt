@@ -1,5 +1,0 @@
-MUST HAVES
-
-1. documentation - keep updating
-3. health check and monitoring - promethius and grafana
-6. refactor
