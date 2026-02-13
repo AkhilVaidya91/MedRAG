@@ -169,6 +169,17 @@ docker run -e HF_TOKEN="$HF_TOKEN" -e SUPABASE_URL="$SUPABASE_URL" -e SUPABASE_K
 
 - Hugging Face Spaces: You can deploy the backend to Hugging Face Spaces if the service fits their allowed patterns; serving static frontend on GitHub Pages is simpler. Docker makes either approach straightforward.
 
+### Deploying MedGemma with vLLM on an A100 GPU
+
+This repository includes a runnable notebook that demonstrates hosting the `google/medgemma-1.5-4b-it` model locally using `vLLM` on an A100 GPU. The notebook both tests the setup and can be adapted for a simple on‑prem deployment when a dedicated A100 server is available: [notebooks/MedGemma_vLLM_Server.ipynb](notebooks/MedGemma_vLLM_Server.ipynb).
+
+- **Purpose:** Run MedGemma on a GPU server (A100 required) with the `vLLM` HTTP serving interface for low-latency chat/completion-style inference.
+- **Notebook:** See [notebooks/MedGemma_vLLM_Server.ipynb](notebooks/MedGemma_vLLM_Server.ipynb) for a complete, runnable example (server launch, readiness checks, and a sample client request).
+ust-remote-code
+
+- **Environment:** Ensure `HUGGINGFACE_HUB_TOKEN` (or `HF_TOKEN`) is set in the environment before launching the server. The notebook shows both interactive token entry and how to export the variable.
+- **Note:** The notebook performs a readiness loop against the `vLLM` `/v1/models` endpoint and demonstrates a sample `POST /v1/chat/completions` client request.
+
 ### Monitoring setup (local)
 - The repository includes a monitoring stack using Prometheus and Grafana located in the `monitering/` folder.
 
